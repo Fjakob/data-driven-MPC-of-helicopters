@@ -1,0 +1,4 @@
+Folder of interest is "Simulation with qpOASES".
+
+Install qpOASES as described in doc and substitute
+the "qpOASES_SQProblem.cpp" file in the simulink folder.
