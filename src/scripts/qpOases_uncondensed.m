@@ -8,24 +8,16 @@
 %  - Elevation_traj.mat                        <-- contains QP matrices
 %  - Data-driven MPC of 3-DoF Helicopters.pdf  <-- Documentation
 %
-% ATTENTION: qpOASES has to be downloaded first!
+% ATTENTION: qpOASES has to be compiled first!
 
 %% Setup
 run('setup.m')
 
 %% Compile qpOASES
 
-currentPath = pwd;
-error('First add your qpOASES path in init script (line 23)')
-%cd 'C:\Users\Fabian\Documents\qpOASES\interfaces\simulink'
-
+error('First add qpOASES_SQProblem.cpp from core folder to simulink subfolder in qpOASES submodule')
+addpath('../core/qpOASES/interfaces/simulink')
 run('make.m')
-cd(currentPath);
-error('Here also (line 27)')
-%addpath('C:\Users\Fabian\Documents\qpOASES\interfaces\simulink')
-
-warning('Dont forget to update the header of "qpOASES_SQProblem.cpp"')
-
 
 %% System Setup 
 

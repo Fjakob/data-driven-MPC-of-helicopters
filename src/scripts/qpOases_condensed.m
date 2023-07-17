@@ -1,7 +1,3 @@
-clear;
-close all;
-set(0,'defaulttextInterpreter','latex');
-
 %% Init script for Data-driven Predicitive Control of a 3-DoF Helicopter.
 %  See documentation for physical and mathematical background.
 %  
@@ -12,9 +8,16 @@ set(0,'defaulttextInterpreter','latex');
 %  - Elevation_traj.mat                        <-- contains QP matrices
 %  - Data-driven MPC of 3-DoF Helicopters.pdf  <-- Documentation
 %
-% ATTENTION: qpOASES has to be downloaded first!
+% ATTENTION: qpOASES has to be compiled first!
 
-addpath('../Data trajectories')
+%% Setup
+run('setup.m')
+
+%% Compile qpOASES
+
+error('First add qpOASES_SQProblem.cpp from core folder to simulink subfolder in qpOASES submodule')
+addpath('../core/qpOASES/interfaces/simulink')
+run('make.m')
 
 %% Compile qpOASES
 
@@ -37,14 +40,31 @@ nu = 6;  % estimated dimension
 m  = 2;  % Input dimension
 p  = 3;  % Output dimension
 
-L_true = 50;     % Prediction Horizon (L_true*dt seconds)
-L = L_true + nu; % for convenience
-N = 31/0.1 + 1;  % Data length (N*dt seconds)
+%% Reference Trajectory Setup
 
-NOISE = false;
-noise_bound_cl   = 1*pi/180; % noise in closed loop measurements
+% Setpoints to be reached (tracking trajectory)
+u_T = [1.1447/2;  1.1447/2]; % input corresponding to y_T = 0 (see DataGen.m)
+
+% Angle setpoints:
+y_T1 = [0*pi/180; 0*pi/180; 0];    % alpha_s, beta_s, gamma_s
+y_T2 = [90*pi/180; 0*pi/180; 0];   % alpha_s, beta_s, gamma_s
+y_T3 = [0*pi/180; 0*pi/180; 0];    % alpha_s, beta_s, gamma_s
+y_T4 = [0*pi/180; -30*pi/180; 0];  % alpha_s, beta_s, gamma_s
+
+% Set point transition times:
+T_Track = 5;
+T_Track2 = 20;
+T_Track3 = 30;
+
+y_goal = [0; 0; 0];
 
 %% Data-driven Predictive Control Setup
+
+L_true = 50;     % Prediction Horizon (L_true*dt seconds)
+L = L_true + nu; % for convenience
+t_data = 31;
+dt = 0.1;
+N = tsim/dt + 1;  % Data length (N*dt seconds)
 
 % Cost Matrices
 Q = blkdiag(15,15,15);%  60*eye(p);
@@ -63,33 +83,9 @@ else
     lambda_sigma = 1e7;
 end
 
-% Setpoints to be reached (tracking trajectory)
-u_T = [1.1447/2;  1.1447/2];     % input corresponding to y_T = 0 (see DataGen.m)
-% Angle setpoints:
-y_goal = [0; 0; 0];
-
 % Not important for now
 lambda_beta = 0;
 
-%% Tracking task
-
-% Setpoints to be reached (tracking trajectory)
-u_T = [1.1447/2;  1.1447/2];     % input corresponding to y_T = 0 (see DataGen.m)
-% Angle setpoints:
-y_T1 = [0*pi/180; 0*pi/180; 0];    % alpha_s, beta_s, gamma_s
-y_T2 = [90*pi/180; 0*pi/180; 0];   % alpha_s, beta_s, gamma_s
-y_T3 = [0*pi/180; 0*pi/180; 0];
-y_T4 = [0*pi/180; -30*pi/180; 0];
-
-% Set point transition times:
-T_Track = 5;
-T_Track2 = 20;
-T_Track3 = 30;
-
-% Needed for simulation model
-C = [1 0 0 0 0 0;...
-     0 0 1 0 0 0;...
-     0 0 0 0 1 0];
 
 %% Quadratic Program Setup
 %
@@ -100,7 +96,7 @@ C = [1 0 0 0 0 0;...
 %           z = [alpha; us; ys; sigma]
 
 %%%%%%%%%%%%%%%%%%%%% For travel task %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-load('Travel_data') %-> ud, yd
+load('datatraj_travel') %-> ud, yd
 Hu = hankel_c(ud(:), L, N-L+1,m);
 Hy = hankel_c(yd(:), L, N-L+1,p);
 
@@ -131,7 +127,7 @@ Hu_t = Hu;
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%% For elevation task %%%%%%%%%%%%%%%%%%%%%%%%%%
-load('Elevation_data') %-> ud, yd
+load('datatraj_elevation') %-> ud, yd
 Hu = hankel_c(ud(:), L, N-L+1,m);
 Hy = hankel_c(yd(:), L, N-L+1,p);
 
@@ -170,6 +166,10 @@ ub = [inf*ones(N-L+1,1); u_max; inf*ones(p+p*L,1)];
 
 T_sim = 40;
 dt = 0.1;
+
+NOISE = 0;
+noise_bound_cl   = 1*pi/180; % noise in closed loop measurements
+
 simout = sim('Data_driven_MPC_condensed.slx');
 
 % Read out signals

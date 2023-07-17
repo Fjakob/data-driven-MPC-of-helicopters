@@ -6,6 +6,7 @@ addpath('../models')
 addpath('../functions')
 addpath('../generatedCache')
 addpath('../../data')
+addpath('../core')
 
 cfg = Simulink.fileGenControl('getConfig');
 cfg.CacheFolder = fullfile(eval(['pwd']),'../generatedCache');
