@@ -18,7 +18,7 @@ The [scripts](/src/scripts/) directory contains the main scripts to run all rele
     qpOases_uncondensed.m
     qpOases_condensed.m
 
-The qpOASES library has to be compiled first to run the related scripts/models. It is recommended to read the manual first. After cloning/pulling the repo, in the [core](/src/core/), folder move the adjusted file `qpOASES_SQProblem` into the `interfaces\simulink` subdirectory in qpOASES to allow for computation time restriction.
+The qpOASES library has to be compiled first to run the related scripts/models. It is recommended to read the manual first. After cloning/pulling the repo, in the [core](/src/core/) folder, move the adjusted file `qpOASES_SQProblem` into the `interfaces\simulink` subdirectory in qpOASES to allow for computation time restriction.
 
 
 ### Documentation
