@@ -65,5 +65,5 @@ data-driven-MPC-of-helicopters
 
 ### Documentation
 
-A detailed [documentation](/doc/Data-driven-MPC-of-3-DoF-Helicopters) is given in the `doc` directory.
+A detailed [documentation](/doc/Data-driven-MPC-of-3-DoF-Helicopters.pdf) is given in the `doc` directory.
 
