@@ -21,6 +21,49 @@ The [scripts](/src/scripts/) directory contains the main scripts to run all rele
 The qpOASES library has to be compiled first to run the related scripts/models. It is recommended to read the manual first. After cloning/pulling the repo, in the [core](/src/core/) folder, move the adjusted file `qpOASES_SQProblem` into the `interfaces\simulink` subdirectory in qpOASES to allow for computation time restriction.
 
 
+### Repo Structure
+
+```
+data-driven-MPC-of-helicopters
+│   README.md  
+│
+└───data
+│   │   datatraj_elevation.mat
+│   │   datatraj_travel.mat
+│   |   qpMat_elevation.mat
+|   └───qpMat_travel.mat
+│
+└───doc
+│   └───Data-driven-MPC-of-3-DoF-Helicopters.pdf
+│
+└───src
+│   └───core
+|   |   |   @qpOASES
+|   |   └───qpOASES_SQProblem.cpp
+|   |
+│   └───functions
+|   |   └───hankel_c.m
+|   |
+│   └───models
+|   |   |   sim_generate_data.slx
+|   |   |   sim_qpOases_condensed.slx
+|   |   |   sim_qpOases_uncondensed.slx
+|   |   |   sim_quadprog_fixed_data.slx
+|   |   |   sim_quadprog_scheduled_data.slx
+|   |   └───sim_quadprog_updated_data.slx
+|
+│   └───scripts
+|   |   |   generate_data.m
+|   |   |   plots.m
+|   |   |   qpOases_condensed.m
+|   |   |   qpOases_uncondensed.m
+|   |   |   quadprog_fixed_data.m
+|   |   |   quadprog_schedule_data.m
+|   |   |   quadprog_update_data.m
+|   |   └───setup.m
+```
+
 ### Documentation
 
 A detailed [documentation](/doc/Data-driven-MPC-of-3-DoF-Helicopters) is given in the `doc` directory.
+
