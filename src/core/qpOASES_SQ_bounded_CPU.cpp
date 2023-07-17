@@ -33,6 +33,11 @@
  *
  */
 
+/**
+ * EDIT: Fabian Jakob (fjakob1998@gmail.com)
+ *
+ */
+
 
 #include <stdlib.h>
 

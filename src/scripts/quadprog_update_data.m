@@ -1,7 +1,3 @@
-clear;
-close all;
-set(0,'defaulttextInterpreter','latex');
-
 %% Init script for Data-driven Predicitive Control of a 3-DoF Helicopter.
 %  See documentation for physical and mathematical background.
 %  
@@ -10,8 +6,9 @@ set(0,'defaulttextInterpreter','latex');
 %   - Data_driven_MPC_UpdatedData.slx           <-- Simulink-model
 %   - hankel_c.m                                <-- used in Controller
 %   - Data-driven MPC of 3-DoF Helicopters.pdf  <-- Documentation
-%
-%  Remark: hankel_r.m didn't work for code generation in Simulink
+
+%% Setup
+run('setup.m')
 
 %% Data Generation
 
@@ -29,7 +26,7 @@ plotData = true;   % Plot data trajectory
 u_disturb = 0.2;
 t_disturb = 0.4;
 
-run('DataGen.m')
+run('generate_data.m')
 
 %% System Setup 
 
@@ -40,18 +37,7 @@ nu = 6; % estimated dimension
 m = 2;  % Input dimension
 p = 3;  % Output dimension
 
-L_true = 50;     % Prediction Horizon (L_true*dt seconds)
-L = L_true + nu; % for convenience
-N = size(ud,2);  % Data length (N*dt seconds)
-
-% Check whether Data is long enough for prediction horizon:
-if N >= (m+1)*(L_true+n) - 1
-    disp('Minimum data length fullfilled')
-else
-    error('Data not large enough for Simulation horizon')
-end
-
-%% Data-driven Predictive Control Setup
+%% Reference Trajectory Setup
 
 % Setpoints to be reached (tracking trajectory)
 u_T = [F_lin(1)/2; F_lin(1)/2];    % input corresponding to y_T = 0 (see DataGen.m)
@@ -65,6 +51,12 @@ y_T4 = [0*pi/180; -30*pi/180; 0];  % alpha_s, beta_s, gamma_s
 T_Track = 5;
 T_Track2 = 20;
 T_Track3 = 30;
+
+%% Data-driven Predictive Control Setup
+
+L_true = 50;     % Prediction Horizon (L_true*dt seconds)
+L = L_true + nu; % for convenience
+N = size(ud,2);  % Data length (N*dt seconds)
 
 % Cost Matrices
 Q = blkdiag(15,15,15);
@@ -85,6 +77,15 @@ end
 
 % Not important for now
 lambda_beta = 0;
+
+%% Data Analysis
+
+% Check whether Data is long enough for prediction horizon:
+if N >= (m+1)*(L_true+n) - 1
+    disp('Minimum data length fullfilled')
+else
+    error('Data not large enough for Simulation horizon')
+end
 
 %% Quadratic Program Setup
 %
@@ -155,7 +156,7 @@ ub_a = [inf*ones(N-L+1,1); u_max; inf*ones(p+p*L,1)];
 
 T_sim = 40; % Simulation time in seconds
 
-simout = sim('Data_driven_MPC_UpdatedData.slx');
+simout = sim('sim_quadprog_updated_data.slx');
 
 % Read out signals
 t = simout.tout;
@@ -181,71 +182,4 @@ sigma = sigma*180/pi;
 
 %% Plots
 
-% Control inputs:
-figure(1)
-subplot(2,1,1)
-stairs(t,u_cl(:,1))
-hold on
-grid on
-yline(u_T(1),'r')
-legend('u_1','u_{1,s}')
-%
-subplot(2,1,2)
-stairs(t,u_cl(:,2))
-hold on
-grid on
-yline(u_T(2),'r')
-legend('u_2','u_{2,s}')
-%
-sgtitle('Control Inputs')
-
-% Plant outputs:
-figure(2)
-subplot(3,1,1)
-hold all
-plot(t,y_cl(:,1),'Linewidth',1.5);
-plot(t,y_T(:,1),'Linewidth',1);
-plot(t,y_s(:,1))
-grid on
-legend('$\alpha$','$\alpha_{goal}$','$\alpha_s$','Interpreter','latex','Location','SouthEast')
-%
-subplot(3,1,2)
-hold all
-plot(t,y_cl(:,2),'Linewidth',1.5);
-plot(t,y_T(:,2),'Linewidth',1);
-plot(t,y_s(:,2))
-grid on
-legend('$\beta$','$\beta_{goal}$','$\beta_s$','Interpreter','latex','Location','SouthEast')
-%
-subplot(3,1,3)
-plot(t,y_cl(:,3),'Linewidth',1.5);
-hold on
-grid on
-legend('\gamma','Location','SouthEast')
-xlabel('time in s')
-%
-sgtitle('Plant Outputs')
-
-% % Slack variable sigma
-% figure
-% stairs(t,sigma)
-% grid on
-
-% Persistence of excitation:
-figure
-stairs(t,sigma_u)
-xlabel('Time in s')
-grid on
-ylabel('$\sigma(H_u)$')
-
-% Real-time ability:
-figure
-stairs(t,compTime)
-grid on
-hold on
-yline(dt,'r')
-yline(mean(compTime),'g')
-ylabel('Computation time')
-xlabel('Simulation time')
-legend('Cpu time', 'Sampling time','Mean Cpu time')
-title('Real-time ability')
+run('plots.m')

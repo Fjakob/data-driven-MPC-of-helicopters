@@ -7,11 +7,9 @@ set(0,'defaulttextInterpreter','latex');
 %  
 %  Attached files:   
 %   - DataGen.m                                 <-- For data generation
-%   - Data_driven_MPC_FixedData.slx             <-- Simulink-model
+%   - Data_driven_MPC_UpdatedData.slx           <-- Simulink-model
 %   - hankel_c.m                                <-- used in Controller
 %   - Data-driven MPC of 3-DoF Helicopters.pdf  <-- Documentation
-%
-%  Remark: hankel_r.m didn't work for code generation in Simulink
 
 %% Data Generation
 
@@ -28,7 +26,7 @@ plotData = false;
 u_disturb = 0.2;
 t_disturb = 0.4;
 
-run('DataGen.m')
+run('generate_data.m')
 
 %% System Setup 
 
@@ -39,25 +37,7 @@ nu = 6;  % estimated dimension
 m  = 2;  % Input dimension
 p  = 3;  % Output dimension
 
-L_true = 50;     % Prediction Horizon (L_true*dt seconds)
-L = L_true + nu; % for convenience
-N = size(ud,2);  % Data length (N*dt seconds)
-
-% Data Analysis:
-if N >= (m+1)*(L_true+nu) - 1
-    disp('Minimum data length fullfilled')
-else
-    error('Data not large enough for Simulation horizon')
-end
-hry = (N-L+1)/(p*L);
-disp(strcat('Hankel ratio is hry= ',num2str(hry),' (ideally 1.7 < hry < 2.3)')) 
-
-Hy = hankel_r(yd(:),L,N-L+1,p);
-Hu = hankel_r(ud(:),L,N-L+1,m);
-
-disp(strcat('Minimum singular value of Hu: ',num2str(min(svd(Hu)))))
-
-%% Data-driven Predictive Control Setup
+%% Reference Trajectory Setup
 
 % Setpoints to be reached (tracking trajectory)
 u_T = [F_lin(1)/2; F_lin(1)/2];     % input corresponding to y_T = 0 (see DataGen.m)
@@ -71,6 +51,12 @@ y_T4 = [0*pi/180; -30*pi/180; 0];  % alpha_s, beta_s, gamma_s
 T_Track = 5;
 T_Track2 = 20;
 T_Track3 = 30;
+
+%% Data-driven Predictive Control Setup
+
+L_true = 50;     % Prediction Horizon (L_true*dt seconds)
+L = L_true + nu; % for convenience
+N = size(ud,2);  % Data length (N*dt seconds)
 
 % Cost Matrices
 Q = 15*eye(p);
@@ -91,6 +77,25 @@ end
 
 % Not important for now
 lambda_beta = 0;
+
+%% Data Analysis
+
+if N >= (m+1)*(L_true+nu) - 1
+    disp('Minimum data length fullfilled')
+else
+    error('Data not large enough for Simulation horizon')
+end
+hry = (N-L+1)/(p*L);
+disp(strcat('Hankel ratio is hry= ',num2str(hry),' (ideally 1.7 < hry < 2.3)')) 
+
+Hy = hankel_c(yd(:),L,N-L+1,p);
+Hu = hankel_c(ud(:),L,N-L+1,m);
+
+disp(strcat('Minimum singular value of Hu: ',num2str(min(svd(Hu)))))
+
+%% Data-driven Predictive Control Setup
+
+
 
 %% Quadratic Program Setup
 %
@@ -153,7 +158,7 @@ b_alpha1 = 1;
 
 T_sim = 30; % Simulation time in seconds
 
-simout = sim('Data_driven_MPC_FixedData.slx');
+simout = sim('sim_quadprog_fixed_data.slx');
 
 % Read out signals
 t        = simout.tout;
@@ -179,81 +184,4 @@ sigma = sigma*180/pi;
 
 %% Plots
 
-% Control inputs:
-figure(1)
-subplot(2,1,1)
-stairs(t,u_cl(:,1))
-hold on
-grid on
-yline(u_T(1),'r')
-legend('u_1','u_{1,s}')
-%
-subplot(2,1,2)
-stairs(t,u_cl(:,2))
-hold on
-grid on
-yline(u_T(2),'r')
-legend('u_2','u_{2,s}')
-%
-sgtitle('Control Inputs')
-
-
-%Plant outputs:
-figure(2)
-subplot(3,1,1)
-hold all
-plot(t,y_cl(:,1),'Linewidth',1.5);
-plot(t,y_T(:,1),'Linewidth',1);
-plot(t,y_s(:,1))
-grid on
-legend('$\alpha$','$\alpha_{goal}$','$\alpha_s$','Interpreter','latex','Location','SouthEast')
-%
-subplot(3,1,2)
-hold all
-plot(t,y_cl(:,2),'Linewidth',1.5);
-plot(t,y_T(:,2),'Linewidth',1);
-plot(t,y_s(:,2))
-grid on
-legend('$\beta$','$\beta_{goal}$','$\beta_s$','Interpreter','latex','Location','SouthEast')
-%
-subplot(3,1,3)
-plot(t,y_cl(:,3),'Linewidth',1.5);
-hold on
-grid on
-legend('\gamma','Location','SouthEast')
-xlabel('time in s')
-%
-sgtitle('Plant Outputs')
-
-
-% Real-time ability:
-figure
-stairs(t,compTime)
-grid on
-hold on
-yline(dt,'r')
-yline(mean(compTime),'g')
-ylabel('Computation time')
-xlabel('Simulation time')
-legend('Cpu time', 'Sampling time','Mean Cpu time')
-title('Real-time ability')
-
-% % Slack variable sigma
-% figure
-% stairs(t,sigma)
-% grid on
-% title('Slack Variable $\sigma$')
-% ylabel('$\sigma$')
-% xlabel('time in s')
-% 
-
-% % Operational Coverage:
-% figure
-% hold all
-% plot(y_cl(:,1),y_cl(:,2),'r-x')
-% plot(y_T(:,1),y_T(:,2),'b')
-% plot(yd(1,:),yd(2,:),'g-x')
-% grid on
-% title('Operational Coverage')
-% %legend('Position','Reference position','Collected data')
-
+run('plots.m')

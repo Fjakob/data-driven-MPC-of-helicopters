@@ -1,7 +1,3 @@
-clear;
-close all;
-set(0,'defaulttextInterpreter','latex');
-addpath('..\Data trajectories') %<-- makes problems sometimes (try add path manually for mysterious errors)
 %% Init script for Data-driven Predicitive Control of a 3-DoF Helicopter.
 %  See documentation for physical and mathematical background.
 %  
@@ -11,22 +7,9 @@ addpath('..\Data trajectories') %<-- makes problems sometimes (try add path manu
 %   - Travel_traj.mat                           <-- contains QP matrices
 %   - Elevation_traj.mat                        <-- contains QP matrices
 %   - Data-driven MPC of 3-DoF Helicopters.pdf  <-- Documentation
-%
-%  Remark: hankel_r.m didn't work for code generation in Simulink
 
-%% Data Generation
-
-% Measurement noise ~Unif
-NOISE = 0;
-noise_bound_data = 1*pi/180; % noise in data generation
-noise_bound_cl   = 1*pi/180; % noise in closed loop measurements
-
-tsim = 31;         % Data-generation time
-dt = 0.1;          % Step size for discretized dynamics
-
-%Disturbance for PE             
-u_disturb = 0.2;
-t_disturb = 0.4;
+%% Setup
+run('setup.m')
 
 %% System Setup 
 
@@ -37,14 +20,11 @@ nu = 6;  % estimated dimension
 m  = 2;  % Input dimension
 p  = 3;  % Output dimension
 
-L_true = 50;     % Prediction Horizon (L_true*dt seconds)
-L = L_true + nu; % for convenience
-N = tsim/dt + 1;  % Data length (N*dt seconds)
-
-%% Data-driven Predictive Control Setup
+%% Reference Trajectory Setup
 
 % Setpoints to be reached (tracking trajectory)
-u_T = [1.1447/2;  1.1447/2];     % input corresponding to y_T = 0 (see DataGen.m)
+u_T = [1.1447/2;  1.1447/2]; % input corresponding to y_T = 0 (see DataGen.m)
+
 % Angle setpoints:
 y_T1 = [0*pi/180; 0*pi/180; 0];    % alpha_s, beta_s, gamma_s
 y_T2 = [90*pi/180; 0*pi/180; 0];   % alpha_s, beta_s, gamma_s
@@ -58,6 +38,16 @@ T_Track3 = 30;
 
 % Not important for now
 lambda_beta = 0;
+
+%% Data-driven Predictive Control Setup
+
+L_true = 50;     % Prediction Horizon (L_true*dt seconds)
+L = L_true + nu; % for convenience
+t_data = 31;
+dt = 0.1;
+N = t_data/dt + 1;  % Data length (N*dt seconds)
+
+% all other matrices are loaded into the workspace
 
 %% Quadratic Program Setup
 %
@@ -77,12 +67,14 @@ y_max = [inf; 33*pi/180; 90*pi/180];
 lb = [-inf*ones(N-L+1,1); repmat(u_min,L,1); repmat(y_min,L,1); u_min; y_min; -inf*ones(p*L,1); -inf];
 ub = [inf*ones(N-L+1,1) ; repmat(u_max,L,1); repmat(y_max,L,1); u_max; y_max;  inf*ones(p*L,1);  inf];
 
-load('Travel_traj') % <-- all matrices already stored in there
+% load matrices into workspace
+load('qpMat_travel') 
 H_t    = H;
 Sy_t   = S_y;
 Adyn_t = A_dyn;
 
-load('Elevation_traj') % <-- all matrices already stored in there
+% load matrices into workspace
+load('qpMat_elevation') 
 H_e    = H;
 Sy_e   = S_y;
 Adyn_e = A_dyn;
@@ -115,7 +107,10 @@ b_alpha1 = 1;
 
 T_sim = 40; % Simulation time in seconds
 
-simout = sim('Data_driven_MPC_ScheduledData.slx');
+NOISE = 0;
+noise_bound_cl   = 1*pi/180; % noise in closed loop measurements
+
+simout = sim('sim_quadprog_scheduled_data.slx');
 
 % Read out signals
 t        = simout.tout;
@@ -140,82 +135,4 @@ sigma = sigma*180/pi;
 
 %% Plots
 
-% Control inputs:
-figure(1)
-subplot(2,1,1)
-stairs(t,u_cl(:,1))
-hold on
-grid on
-yline(u_T(1),'r')
-legend('u_1','u_{1,s}')
-%
-subplot(2,1,2)
-stairs(t,u_cl(:,2))
-hold on
-grid on
-yline(u_T(2),'r')
-legend('u_2','u_{2,s}')
-%
-sgtitle('Control Inputs')
-
-% Plant outputs:
-figure(2)
-subplot(3,1,1)
-hold all
-plot(t,y_cl(:,1),'Linewidth',1.5);
-plot(t,y_T(:,1),'Linewidth',1);
-plot(t,y_s(:,1))
-grid on
-ylabel('$\alpha$')
-legend('$\alpha$','$\alpha_{goal}$','$\alpha_s$','Interpreter','latex','Location','NorthEast')
-%
-subplot(3,1,2)
-hold all
-plot(t,y_cl(:,2),'Linewidth',1.5);
-plot(t,y_T(:,2),'Linewidth',1);
-plot(t,y_s(:,2))
-grid on
-ylabel('$\beta$')
-legend('$\beta$','$\beta_{goal}$','$\beta_s$','Interpreter','latex','Location','NorthEast')
-%
-subplot(3,1,3)
-plot(t,y_cl(:,3),'Linewidth',1.5);
-hold on
-grid on
-legend('\gamma','Location','SouthEast')
-ylabel('$\gamma$')
-xlabel('time in s')
-%
-sgtitle('Plant Outputs')
-
-% Real-time ability:
-figure
-stairs(t,compTime)
-grid on
-hold on
-yline(dt)
-ylabel('Computation time')
-xlabel('Simulation time')
-title('Real-time ability')
-
-% % Slack variable sigma
-% figure
-% stairs(t,sigma)
-% grid on
-% title('Slack Variable $\sigma$')
-% ylabel('$\sigma$')
-% xlabel('time in s')
-
-% Operational Coverage:
-% figure
-% hold all
-% plot(y_cl(:,1),y_cl(:,2),'r-x')
-% plot(y_T(:,1),y_T(:,2),'b')
-% plot(yd(1,:),yd(2,:),'g-x')
-% grid on
-% title('Operational Coverage')
-%legend('Position','Reference position','Collected data')
-
-
-
-
+run('plots.m')

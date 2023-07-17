@@ -1,7 +1,3 @@
-clear;
-close all;
-set(0,'defaulttextInterpreter','latex');
-
 %% Init script for Data-driven Predicitive Control of a 3-DoF Helicopter.
 %  See documentation for physical and mathematical background.
 %  
@@ -14,13 +10,15 @@ set(0,'defaulttextInterpreter','latex');
 %
 % ATTENTION: qpOASES has to be downloaded first!
 
-addpath('../Data trajectories')
+%% Setup
+run('setup.m')
 
 %% Compile qpOASES
 
 currentPath = pwd;
 error('First add your qpOASES path in init script (line 23)')
 %cd 'C:\Users\Fabian\Documents\qpOASES\interfaces\simulink'
+
 run('make.m')
 cd(currentPath);
 error('Here also (line 27)')
@@ -28,14 +26,6 @@ error('Here also (line 27)')
 
 warning('Dont forget to update the header of "qpOASES_SQProblem.cpp"')
 
-%% Data Generation
-
-% Measurement noise ~Unif
-NOISE = 0;
-noise_bound_cl   = 1*pi/180; % noise in closed loop measurements
-
-tsim = 31;
-dt = 0.1;
 
 %% System Setup 
 
@@ -46,32 +36,33 @@ nu = 6;  % estimated dimension
 m  = 2;  % Input dimension
 p  = 3;  % Output dimension
 
-L_true = 50;     % Prediction Horizon (L_true*dt seconds)
-L = L_true + nu; % for convenience
-N = tsim/dt + 1;  % Data length (N*dt seconds)
-
-%% Data-driven Predictive Control Setup
+%% Reference Trajectory Setup
 
 % Setpoints to be reached (tracking trajectory)
-u_T = [1.1447/2;  1.1447/2];     % input corresponding to y_T = 0 (see DataGen.m)
+u_T = [1.1447/2;  1.1447/2]; % input corresponding to y_T = 0 (see DataGen.m)
+
 % Angle setpoints:
 y_T1 = [0*pi/180; 0*pi/180; 0];    % alpha_s, beta_s, gamma_s
 y_T2 = [90*pi/180; 0*pi/180; 0];   % alpha_s, beta_s, gamma_s
-y_T3 = [0*pi/180; 0*pi/180; 0];
-y_T4 = [0*pi/180; -30*pi/180; 0];
+y_T3 = [0*pi/180; 0*pi/180; 0];    % alpha_s, beta_s, gamma_s
+y_T4 = [0*pi/180; -30*pi/180; 0];  % alpha_s, beta_s, gamma_s
 
 % Set point transition times:
 T_Track = 5;
 T_Track2 = 20;
 T_Track3 = 30;
 
-% Needed for simulation model
-C = [1 0 0 0 0 0;...
-     0 0 1 0 0 0;...
-     0 0 0 0 1 0];
-
 % Not important for now
 lambda_beta = 0;
+
+
+%% Data-driven Predictive Control Setup
+
+L_true = 50;     % Prediction Horizon (L_true*dt seconds)
+L = L_true + nu; % for convenience
+t_data = 31;
+dt = 0.1;
+N = tsim/dt + 1;  % Data length (N*dt seconds)
 
 %% Quadratic Program Setup
 %
@@ -95,12 +86,12 @@ y_max = [inf; inf*pi/180; 90*pi/180];
 lb = [-inf*ones(N-L+1,1); repmat(u_min,L,1); repmat(y_min,L,1); u_min; y_min; -inf*ones(p*L,1); -inf]';
 ub = [inf*ones(N-L+1,1); repmat(u_max,L,1); repmat(y_max,L,1); u_max; y_max; inf*ones(p*L,1); inf]';
 
-load('Travel_traj')
+load('qpMat_travel')
 H_t    = H;
 Sy_t   = S_y;
 Adyn_t = A_dyn;
 
-load('Elevation_traj')
+load('qpMat_elevation')
 H_e    = H;
 Sy_e   = S_y;
 Adyn_e = A_dyn;
@@ -130,7 +121,10 @@ b_alpha1 = 1;
 
 T_sim = 40; % Simulation time in seconds
 
-simout = sim('Data_driven_MPC_uncondensed.slx');
+NOISE = 0;
+noise_bound_cl   = 1*pi/180; % noise in closed loop measurements
+
+simout = sim('sim_qpOases_uncondensed.slx');
 
 % Read out signals
 t        = simout.tout;
@@ -141,7 +135,7 @@ y_T      = simout.trajectory.Data;
 
 % Tracking error
 e_mat = (y_cl-y_T)'*(y_cl-y_T); % error matrix
-%e = trace(e_mat(1:2,1:2))       % only take alpha and beta tracking error
+%e = trace(e_mat(1:2,1:2))  % only take alpha and beta tracking error
 
 % Convert to Degree
 y_cl  = y_cl*180/pi;

@@ -1,5 +1,5 @@
-
 set(0,'defaulttextInterpreter','latex');
+addpath('../models')
 
 %% Script for (simulative) Data Generation
 %  Will be called in init files where Data Generation is needed.
@@ -7,10 +7,11 @@ set(0,'defaulttextInterpreter','latex');
 %  See documentation for physical and mathematical background.
 %  
 %  Attached files: 
-%   - DataGenerationNonlin.slx     <-- Simulink-Model
-%   - hankel_r.m                   <-- Hankel-matrix calculation
+%   - Data_Generation.slx   <-- Simulink-Model
+%
+% Author: Fabian Jakob (fjakob1998@gmail.com)
 
-%% Model parameters for 3-DoF Helicopter
+%% Prestabilizing Controller: Model parameters
 
 m_H = 1.322;
 m_A = 2.638;
@@ -28,7 +29,7 @@ rAHz = 0.0193;
 
 g = 9.81;
 
-%% Nonlinear equations of motion
+%% Prestabilizing Controller: Model equations
 
 syms alph dalph bet dbet gam dgam %short for alpha, alpha_dot, beta, beta_dot, gamma, gamma_dot
 syms Fsum Fdiff
@@ -40,7 +41,7 @@ f = [dalph;...
      dgam;...
      -1/Jzz * r * Fdiff];
  
-%% Linearization around set point
+%% Prestabilizing Controller: Model linearization
  
 x = [alph; dalph; bet; dbet; gam; dgam];
 u = [Fsum; Fdiff];
@@ -71,17 +72,17 @@ p = 3; %number of outputs
 clear alph dalph bet dbet gam dgam Fsum Fdiff x u
 clear A_fct B_fct A_t B_t
  
-%% System analysis
+%% Prestabilizing Controller: Model analysis
 
 poles = eig(A);
 rank_P = rank(ctrb(A,B));
 rank_Q = rank(obsv(A,C));
 
-%% Pre stabilizing controller
+%% Prestabilizing Controller: LQR synthesis
 
 %State feedback:
-%Q = blkdiag(500,1,5,1,1,1);% <- for elevation traj (u_dist=0.2, tdist=0.3)
-Q = 5*eye(6);               % <- for travel traj (u_dist=0.2, tdist = 0.4)
+%Q = blkdiag(500,1,5,1,1,1);
+Q = 5*eye(6);              
 R = eye(2);
 K = lqr(A,B,Q,R);
 
@@ -92,11 +93,11 @@ Lobs = lqr(A',C',Qhat,Rhat)';
 
 clear Q R Qhat Rhat
 
-%% Data Generation
+%% Generate data from pre-stabilized plant
 
 x0 = [0/180*pi; 0; 0/180*pi; 0; 0; 0];
 
-simout = sim('DataGenerationNonlin.slx');
+simout = sim('sim_generate_data.slx');
 
 t  = simout.tout;
 ud = simout.input.Data';
@@ -144,26 +145,3 @@ if plotData
     set(gcf,'position',[0,0,750,200])
 end
 
-%% Data Analysis
-
-% N = length(t);      %Data length = tsim/dt + 1
-% L_true = 50;        %Simulation length
-% 
-% if N >= (m+1)*(L_true+n)
-%     disp('Minimum data length fullfilled')
-% else
-%     error('Data not large enough for Simulation horizon')
-% end
-% 
-% Hu = hankel_r(ud(:), L_true+n, N-(L_true+n)+1,m);
-% Hy = hankel_r(yd(:), L_true+n, N-(L_true+n)+1,p);
-% 
-% if abs(min(svd(Hu))) > 1e-3
-%     disp('u(t) is persistently exciting')
-%     disp('Minimum singular value of Hu:')
-%     disp(num2str(min(svd(Hu))))
-% else
-%     disp('Minimum singular value of Hu:')
-%     disp(num2str(min(svd(Hu))))
-%     warning('u might not be persistently exciting')
-% end
