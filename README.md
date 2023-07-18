@@ -1,6 +1,6 @@
 # Data-driven MPC of helicopters
 
-Data-driven Model Predictive Control of 3-DoF Helicopters including mathematical modelling, data generation and control algorithm implementation.
+Data-driven Model Predictive Control of 3-DoF Helicopters including mathematical modelling, data generation and control algorithm implementation. This repo is the result of a student employement at the [Institute of Systems Theory and Automatic Control](https://www.ist.uni-stuttgart.de/) at the University of Stuttgart under the supervision of Prof. Frank Allgöwer.
 
 ### Requirements
 
